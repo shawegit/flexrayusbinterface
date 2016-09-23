@@ -19,9 +19,9 @@ SET( BOOST_LIBS
   ${Boost_LIBRARIES}
 )
 
-INCLUDE_DIRECTORIES( "/opt/ros/jade/include")
+INCLUDE_DIRECTORIES( "/opt/ros/indigo/include")
 FIND_LIBRARY(ROSCONSOLE_LIBRARY rosconsole
-    /opt/ros/jade/lib
+    /opt/ros/indigo/lib
     NO_DEFAULT_PATH
 )
 

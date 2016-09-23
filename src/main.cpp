@@ -29,7 +29,9 @@ int main(int argc, char* argv[]){
 				break;
 			case '6':
 				ncurse.setAllToForce();
-				break;
+			case '7': //Martina
+				ncurse.resetspring();
+
         }
 		ncurse.querySensoryData();
     }while( cmd != '9');

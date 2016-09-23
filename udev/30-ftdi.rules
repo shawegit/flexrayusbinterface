@@ -1,2 +1,3 @@
 ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6014", MODE:="0666"
 ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6014", RUN+="/bin/sh -c 'echo $kernel > /sys/bus/usb/drivers/ftdi_sio/unbind'"
+

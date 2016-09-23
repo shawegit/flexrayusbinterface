@@ -88,7 +88,8 @@ void FlexRayHardwareInterface::initializeMotors(){
         for(uint j=0;j<4;j++)
         {
             commandframe0[i].sp[j] = 0;
-            commandframe1[i].sp[j] = 0;
+            commandframe1[i].sp[j] = 0; 
+            
         }
     }
 	updateCommandFrame();
@@ -103,6 +104,172 @@ void FlexRayHardwareInterface::initializeMotors(){
 #endif
     ROS_INFO("%d ganglions are connected via flexray, activeGanglionsMask %c", numberOfGanglionsConnected,activeGanglionsMask);
 };
+
+void resetspring(int8 ganglion, int8 motor){  //Martina
+        timeout(-1);
+        echo();
+      
+        //I have to do a backup of the controlmode we have to restore it after resetting the spirng
+        // make a backup of control modes so after recording they can be restored (it works in flexrayHardwareInterface)
+        int8_t motorControllerType_backup = flexray.motorControllerType(ganglion*4+motor);
+        float setPoints_backup;
+
+                if(ganglion<3)
+                    setPoints_backup = flexray.commandframe0[ganglion].sp[motor];
+                else
+                    setPoints_backup[i] = flexray.commandframe1[ganglion].sp[motor];
+
+        flexray.initVelocityControl(ganglion,motor);
+        cc=0;
+        float vel;
+        sleep(1);
+
+        //This is needed if you call the function while the actuator is moving
+        pos=0;
+        if(ganglion_id < 3)
+            flexray.commandframe0[ganglion].sp[motor] = pos;
+        else
+            flexray.commandframe1[ganglion-3].sp[motor] = pos;
+        flexray.updateCommandFrame();
+        flexray.exchangeData();
+        usleep(300000);
+        tendonDisplacement_t[0] = flexray.GanglionData[ganglion_id].muscleState[motor_id].tendonDisplacement/32768.0f; //tendon displacemnte iniziale
+        //mvprintw(23,0,"Displacement_t0 %.5f     ",tendonDisplacement_t[0]);
+        refresh();
+        //Shaking the spring for 2 sec 
+        for (uint i=1;i<3;i++){
+        pos=3;
+        if(ganglion< 3)
+            flexray.commandframe0[ganglion].sp[motor] = pos;
+        else
+            flexray.commandframe1[ganglion-3].sp[motor] = pos;
+        flexray.updateCommandFrame();
+        flexray.exchangeData();
+        querySensoryData();
+        usleep(800000);
+        tendonDisplacement_t[i] = flexray.GanglionData[ganglion_id].muscleState[motor_id].tendonDisplacement/32768.0f;
+        mvprintw(23+i,0,"Displacement_t%d %.5f ",i,tendonDisplacement_t[i]);
+        refresh();
+        }
+
+        uint j=1;
+        for (j=1;j<3;j++){
+        pos=-3;
+        if(ganglion_id < 3)
+            flexray.commandframe0[ganglion_id].sp[motor_id] = pos;
+        else
+            flexray.commandframe1[ganglion_id-3].sp[motor_id] = pos;
+        flexray.updateCommandFrame();
+        flexray.exchangeData();
+        querySensoryData();
+        usleep(500000);
+        }
+
+        //relaxing the spring
+        uint t=0;
+        if (tendonDisplacement_t[2]<tendonDisplacement_t[0])
+            vel=3;
+        else if (tendonDisplacement_t[0]>tendonDisplacement_t[2]) 
+            vel=-3;
+        else 
+            vel=0;
+        tendonDisplacement_t2[0]=flexray.GanglionData[ganglion_id].muscleState[motor_id].tendonDisplacement/32768.0f;
+        mvprintw(23+i,0,"Displacement_t20 %.5f ",tendonDisplacement_t2[t]);
+        refresh();
+        
+        float aux=0;
+        do {
+            pos=vel;
+            if(ganglion_id < 3)
+                flexray.commandframe0[ganglion_id].sp[motor_id] = pos;
+            else
+                flexray.commandframe1[ganglion_id-3].sp[motor_id] = pos;
+        flexray.updateCommandFrame();
+        flexray.exchangeData();
+        querySensoryData();
+        usleep(300000);
+        tendonDisplacement_t2[t+1]=flexray.GanglionData[ganglion_id].muscleState[motor_id].tendonDisplacement/32768.0f;
+        t++;
+        mvprintw(23+i+t,0,"Displacement_t2 %d %.5f ",t,tendonDisplacement_t2[t]);
+        refresh();
+
+        if (tendonDisplacement_t2[t]==tendonDisplacement_t2[t-1]){
+            
+                    
+                if (cc>0 && tendonDisplacement_t2[t]==aux)
+                        cc++;
+                else if (cc==0){
+                        aux=tendonDisplacement_t2[t];
+                        cc++;
+                    }
+                else cc=0;
+                }
+
+                }while (cc !=4);
+        
+        //Stop the spring and reset the sensor
+        pos=0;
+        if(ganglion_id < 3)
+                flexray.commandframe0[ganglion_id].sp[motor_id] = pos;
+            else
+                flexray.commandframe1[ganglion_id-3].sp[motor_id] = pos;
+        flexray.updateCommandFrame();
+        flexray.exchangeData();
+        querySensoryData();
+        sleep(2);
+        //motor.offset=flexray.GanglionData[ganglion_id].muscleState[motor_id].tendonDisplacement;
+        // mvprintw(22+i+t+2,0,"Displacement %.5f ",flexray.GanglionData[ganglion_id].muscleState[motor_id].tendonDisplacement);
+        refresh();
+        flexray.updateCommandFrame();
+        //For the tag control 
+        //controlparams.tag = 1;            // sint32
+
+        //restore controller types
+        uint m=0;
+        for (uint ganglion=0;ganglion<NUMBER_OF_GANGLIONS;ganglion++){
+            for ( uint motor=0;motor<NUMBER_OF_JOINTS_PER_GANGLION;motor++){
+                switch (motorControllerType_backup[m]) {
+                    case Position:
+                        flexray.initPositionControl(ganglion,motor);
+                        break;
+                    case Velocity:
+                        flexray.initVelocityControl(ganglion,motor);
+                        break;
+                    case Force:
+                        flexray.initForceControl(ganglion,motor);
+                        break;
+                }
+                m++;
+            }
+        }
+        // restore setpoints -->do we want to restore the setpoints again or we just want the mode we were before?
+        i=0;
+        for (uint ganglion=0;ganglion<NUMBER_OF_GANGLIONS;ganglion++){
+            for ( uint motor=0;motor<4;motor++){
+                if(ganglion_id<3)
+                    flexray.commandframe0[ganglion].sp[motor] = setPoints_backup[i];
+                else
+                    flexray.commandframe1[ganglion].sp[motor] = setPoints_backup[i];
+                i++;
+            }
+        }
+        flexray.updateCommandFrame();
+        flexray.exchangeData();
+
+        //controlparams.tag=0;
+        flexray.updateCommandFrame();
+        flexray.exchangeData();
+
+        print(4,0,cols," ");
+        print(5,0,cols," ");
+        noecho();
+
+    }
+
+
+
+
+
 
 void FlexRayHardwareInterface::initPositionControl(float Pgain, float IGain, float Dgain, float forwardGain, 
         float deadBand, float integral, float IntegralPosMin, float IntegralPosMax, 
@@ -420,7 +587,7 @@ void FlexRayHardwareInterface::exchangeData(){
 #else
 	ROS_DEBUG("NO HARDWARE, using virtual roboy");
 #endif
-	updateMotorState();
+	updateMotorState(); //ogni volta che scrivo e leggo faccio un update del motor state (cambia da 0 a 1, da 0 a 1)
 }
 
 void FlexRayHardwareInterface::updateCommandFrame(){
