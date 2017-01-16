@@ -1,6 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
-
-PROJECT ( flexrayusbinterface )
+set(LIB_NAME "flexrayusbinterface")
+PROJECT ( ${LIB_NAME} )
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
@@ -13,49 +13,57 @@ SET(CMAKE_CXX_FLAGS "-std=c++11")
 #==============================================================================
 # Dependencies
 #==============================================================================
-find_package(catkin REQUIRED COMPONENTS)
-
-find_package (PkgConfig REQUIRED)
+#find_package(catkin REQUIRED COMPONENTS)
+#find_package (PkgConfig REQUIRED)
 
 # Boost
 find_package ( Boost COMPONENTS system REQUIRED  )
 
-# Mapbox
-find_package ( Mapbox REQUIRED )
-
 # libftd2xx driver lib
 find_package(libftd2xx REQUIRED)
 
-catkin_package(DEPENDS Boost
-        INCLUDE_DIRS include
-        LIBRARIES libflexrayusbinterface
-        DEPENDS libftd2xx Mapbox)
-
-
-include_directories(
-    include
-    ${libftd2xx_INCLUDE_DIRS}
-    ${Mapbox_INCLUDE_DIRS}
-    ${Boost_INCLUDE_DIR}
-    )
+# Mapbox
+find_package ( Mapbox REQUIRED )
 
 #==============================================================================
 # Application
 #==============================================================================
-add_library(libflexrayusbinterface src/FlexRayHardwareInterface.cpp src/Spi.cpp src/UsbChannel.cpp)
+add_library(lib${LIB_NAME} src/FlexRayHardwareInterface.cpp src/Spi.cpp src/UsbChannel.cpp)
+
+target_include_directories(
+    lib${LIB_NAME}
+	PRIVATE include
+    PUBLIC ${libftd2xx_INCLUDE_DIRS}
+    PUBLIC ${Boost_INCLUDE_DIR}
+    PUBLIC ${Mapbox_INCLUDE_DIRS}
+)
+
 target_link_libraries(
-    libflexrayusbinterface
+    lib${LIB_NAME}
     ${Boost_LIBRARIES}
     ${libftd2xx_LIBRARY}
     -ldl
 )
+
 #==============================================================================
 # Installation
 #==============================================================================
-install(TARGETS
-        libflexrayusbinterface
-        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-        )
+file(GLOB LIB_INCLUDES include/flexrayusbinterface/*.*)
+configure_file(cmake/config.cmake.in "${PROJECT_BINARY_DIR}/${LIB_NAME}Config.cmake" @ONLY)
 
-file(GLOB TEST_SOURCE_FILES test/*.cpp)
-catkin_add_gtest(unit_tests ${TEST_SOURCE_FILES})
+install(FILES ${LIB_INCLUDES} DESTINATION include/${LIB_NAME})
+install(TARGETS lib${LIB_NAME} EXPORT ${LIB_NAME}-targets DESTINATION lib/${LIB_NAME})
+install(EXPORT ${LIB_NAME}-targets DESTINATION lib/${LIB_NAME})
+install(FILES ${PROJECT_BINARY_DIR}/${LIB_NAME}Config.cmake DESTINATION lib/${LIB_NAME})
+
+#==============================================================================
+# Testing
+#==============================================================================
+OPTION (BUILD_TESTS "Build Unit Tests (Requires GTest)" OFF)
+if(BUILD_TESTS)
+	find_package(GTest REQUIRED)
+	file(GLOB TEST_SOURCE_FILES test/*.cpp)
+	include_directories(${GTEST_INCLUDE_DIRS})
+	add_executable(unit_tests ${TEST_SOURCE_FILES})
+	target_link_libraries(unit_tests libflexrayusbinterface ${GTEST_BOTH_LIBRARIES} pthread)
+endif(BUILD_TESTS)

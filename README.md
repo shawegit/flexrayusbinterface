@@ -77,3 +77,36 @@ cd path/to/flexrayusbinterface
 doxygen Doxyfile
 ```
 The documentation is put into the doc folder.
+
+# Mapbox Variant #
+Get mapbox from Git, and clone it into a directory path/to/flexrayusbinterface/../Mapbox. If you do it like this, the
+provided cmake findMapbox will work for you. 
+```
+#! bash
+git clone https://github.com/mapbox/variant.git path/to/flexrayusbinterface/../Mapbox
+```
+Make sure you don't put it inside the CMake source directory, because target_include_directories()
+does not work with include directories that are within the CMake source directory, and so you would have to label it as
+private, and then add the include directory to mapbox manually in a project that uses the flexrayusbinterface library. 
+
+
+# Unit Tests (Optional) #
+First you need to install Googlet Test. On Ubuntu, one approach is 
+```
+#!bash
+sudo apt-get install libgtest-dev
+cd /usr/src/gtest
+sudo cmake CMakeLists.txt && sudo make
+sudo cp *.a /usr/lib
+```
+
+To build the project with unittesting enabled and to run the unit tests do
+```
+#!bash
+cd path/to/flexrayusbinterface
+mkdir build
+cd build
+cmake -DBUILD_TESTS=ON ..
+make
+./../bin/unit_tests
+```

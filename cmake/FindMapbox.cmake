@@ -7,8 +7,12 @@
 
 
 find_path(Mapbox_INCLUDE_DIR NAMES mapbox/variant.hpp
-	PATHS ${PROJECT_SOURCE_DIR}/../flexrayusbinterface/lib/Mapbox/include/ 
+	PATHS ${PROJECT_SOURCE_DIR}/../Mapbox/include/ 
 )
+
+#find_path(Mapbox_INCLUDE_DIR NAMES mapbox/variant.hpp
+#	PATHS ${PROJECT_SOURCE_DIR}/../flexrayusbinterface/lib/Mapbox/include/ 
+#)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Mapbox  DEFAULT_MSG Mapbox_INCLUDE_DIR)
