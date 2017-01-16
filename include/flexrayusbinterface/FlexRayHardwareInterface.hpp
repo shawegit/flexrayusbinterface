@@ -4,11 +4,11 @@
 #include <array>
 #include <bitset>
 #include <cstdint>
+#include <chrono>
 #include <string>
 #include <vector>
 
 #include "flexrayusbinterface/CommunicationData.h"
-#include "flexrayusbinterface/Spi.hpp"
 
 #include "flexrayusbinterface/UsbChannel.hpp"
 
@@ -82,7 +82,7 @@ public:
   /**
    * Measure connection time via multiple calls to exchangeData()
    */
-  double measureConnectionTime();
+  std::chrono::duration<double> measureConnectionTime(uint32_t iterations);
 
   struct
   {
@@ -95,7 +95,7 @@ public:
   //! upstream from ganglions to PC
   std::array<ganglionData_t, NUMBER_OF_GANGLIONS> GanglionData;
 
-  static auto connect() -> boost::optional<FlexRayHardwareInterface>;
+  static auto connect() -> variant<FlexRayHardwareInterface, FtResult>;
 
 private:
   FlexRayHardwareInterface(UsbChannel channel);
